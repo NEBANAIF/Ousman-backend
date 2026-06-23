@@ -27,8 +27,9 @@ import java.util.List;
  *  ROLES:
  *    ADMIN  → full access to every endpoint
  *    WORKER → full Products access (read, create, update, delete, stock-adjust),
- *             read today's Sales only, POST sales (record)
- *             NO access to: users, stock-history, delete sales
+ *             on Sales/Loans: can view, record a sale, and record a payment —
+ *             cannot delete
+ *             NO access to: users, stock-history
  *
  *  JWT is stateless (no session). Role is embedded in token claim "role".
  *  JwtAuthFilter extracts it and sets ROLE_ADMIN or ROLE_WORKER authority.
@@ -82,11 +83,10 @@ public class SecurityConfig {
                 // Workers cannot view stock history
                 .requestMatchers("/api/stock-history/**").hasRole("ADMIN")
 
-                // ── SALES: Workers can GET (today filter done in frontend)
-                //           Workers can POST (record a sale)
-                //           Workers CANNOT DELETE — ADMIN only
+                // ── SALES: Workers can GET (view) and POST/PUT (record sale,
+                //           record loan payment) — only DELETE is ADMIN-only
                 .requestMatchers(HttpMethod.DELETE, "/api/sales/**").hasRole("ADMIN")
-                .requestMatchers("/api/sales/**").authenticated()  // GET + POST allowed for both roles
+                .requestMatchers("/api/sales/**").authenticated()  // GET + POST + PUT allowed for both roles
 
                 // ── PRODUCTS: Both ADMIN and WORKER have full access
                 //              (read, create, update, delete, stock-adjust)

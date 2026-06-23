@@ -27,7 +27,7 @@ public class SetupController {
     @PostMapping("/init-admin")
     public ResponseEntity<?> createFirstAdmin(@RequestBody AdminInitRequest request) {
         try {
-            //  Only allow creation when database is empty (no users exist)
+            // ✅ Only allow creation when database is empty (no users exist)
             long userCount = userService.countUsers();
             if (userCount > 0) {
                 return ResponseEntity.status(403).body(
