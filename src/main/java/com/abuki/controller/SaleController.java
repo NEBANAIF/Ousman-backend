@@ -16,11 +16,14 @@ import java.util.Map;
  * ─────────────────────────────────────────────────────────────────────────
  *  Sale Controller — Role-Based Access
  *
- *  ADMIN:  GET all, GET by id, POST (record), DELETE
- *  WORKER: GET /today (today only), POST (record sale)
- *          DELETE → 403 (blocked in SecurityConfig)
+ *  ADMIN:  GET all, GET by id, POST (record), PUT payment, DELETE
+ *  WORKER: GET all, GET /today, POST (record sale), PUT payment
+ *          DELETE → 403 (blocked in SecurityConfig + @PreAuthorize)
  *
- *  The /today endpoint is used by the frontend when the logged-in user is WORKER.
+ *  Workers get full read access to sales/loan history (needed for the
+ *  Loans page, which must total outstanding debt across ALL sales, not
+ *  just today's). The /today endpoint remains available for quick
+ *  "today only" views on the Sales dashboard.
  * ─────────────────────────────────────────────────────────────────────────
  */
 @RestController
@@ -30,9 +33,12 @@ public class SaleController {
     @Autowired
     private SaleService saleService;
 
-    // ── GET /api/sales — ADMIN only (all sales) ───────────────────────────
+    // ── GET /api/sales — ADMIN + WORKER (full sales/loan history) ─────────
+    // Workers need this for both the Sales page and the Loans page, since
+    // outstanding loans must be calculated across all historical sales,
+    // not just today's.
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'WORKER')")
     public ResponseEntity<List<Sale>> getAll() {
         return ResponseEntity.ok(saleService.getAll());
     }
@@ -79,9 +85,9 @@ public class SaleController {
         }
     }
 
-    // ── PUT /api/sales/{id}/payment — ADMIN only (update loan payment) ────
+    // ── PUT /api/sales/{id}/payment — ADMIN + WORKER (record a loan payment) ──
     @PutMapping("/{id}/payment")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'WORKER')")
     public ResponseEntity<?> updatePayment(
             @PathVariable Long id,
             @RequestBody Map<String, Object> body) {

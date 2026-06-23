@@ -27,8 +27,8 @@ import java.util.List;
  *  ROLES:
  *    ADMIN  → full access to every endpoint
  *    WORKER → full Products access (read, create, update, delete, stock-adjust),
- *             on Sales/Loans: can view, record a sale, and record a payment —
- *             cannot delete
+ *             full Sales/Loans access (view all history, record a sale,
+ *             record a loan payment) — cannot delete
  *             NO access to: users, stock-history
  *
  *  JWT is stateless (no session). Role is embedded in token claim "role".
