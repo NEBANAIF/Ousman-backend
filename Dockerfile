@@ -1,5 +1,5 @@
 # ============================================================
-#  Abuki Backend — Multi-stage Docker build
+#  Neba Backend — Multi-stage Docker build
 #  Stage 1: Maven build (Java 21)
 #  Stage 2: Minimal JRE runtime image
 # ============================================================

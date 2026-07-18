@@ -12,11 +12,11 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.abuki</groupId>
-    <artifactId>abuki-backend</artifactId>
+    <groupId>com.neba</groupId>
+    <artifactId>neba-backend</artifactId>
     <version>1.0.0</version>
-    <name>abuki-backend</name>
-    <description>Abuki ERP Backend</description>
+    <name>neba-backend</name>
+    <description>Neba ERP Backend</description>
 
     <properties>
         <java.version>21</java.version>
