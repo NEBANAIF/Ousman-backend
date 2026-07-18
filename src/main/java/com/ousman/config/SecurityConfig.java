@@ -83,6 +83,10 @@ public class SecurityConfig {
                 // Workers cannot view stock history
                 .requestMatchers("/api/stock-history/**").hasRole("ADMIN")
 
+                // ── ADMIN-ONLY: Analytics dashboard ─────────────────────────
+                // Workers cannot view analytics (matches Sidebar adminOnly flag)
+                .requestMatchers("/api/analytics/**").hasRole("ADMIN")
+
                 // ── SALES: Workers can GET (view) and POST/PUT (record sale,
                 //           record loan payment) — only DELETE is ADMIN-only
                 .requestMatchers(HttpMethod.DELETE, "/api/sales/**").hasRole("ADMIN")
