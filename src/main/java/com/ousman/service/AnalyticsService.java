@@ -21,11 +21,14 @@ import java.util.Map;
 /**
  * Builds the payload for GET /api/analytics/dashboard.
  *
- * NOTE ON PROFIT: Product/Sale do not currently track a cost price (COGS),
- * only the selling price. Until a cost field is added, "netProfit" is
- * reported as equal to total revenue and "loss" is always 0 — this is a
- * placeholder, not a real margin calculation. Add a `costPrice` field to
- * Product to compute genuine profit/loss here.
+ * NOTE ON PROFIT/EXPENSES: Product/Sale do not currently track a cost price
+ * (COGS), and there is no Expense entity/table in the backend at all —
+ * Finance.jsx calls GET /api/expenses but no controller serves it (the
+ * frontend already catches that failure and falls back to an empty list).
+ * Until those exist, "cogs" and "expenses" here are always 0, and
+ * "grossProfit"/"netProfit" both equal total revenue. This is a placeholder,
+ * not a real margin calculation — add a `costPrice` field to Product and an
+ * Expense entity/controller to compute genuine figures.
  */
 @Service
 public class AnalyticsService {
@@ -45,15 +48,25 @@ public class AnalyticsService {
         long totalQuantity = sales.stream().mapToLong(s -> s.getQuantity() != null ? s.getQuantity() : 0).sum();
         double avgOrderValue = saleCount > 0 ? totalRevenue / saleCount : 0.0;
 
-        // No COGS tracked yet — see class-level note.
-        double netProfit = totalRevenue;
-        double netMarginPct = totalRevenue > 0 ? 100.0 : 0.0;
+        // No COGS or expense tracking exists yet — see class-level note.
+        // These are placeholders (0 / revenue) so the Finance page has real
+        // numbers to render instead of missing fields that crash the UI.
+        double cogs = 0.0;
+        double expenses = 0.0;
+        double grossProfit = totalRevenue - cogs;
+        double grossMarginPct = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100.0 : 0.0;
+        double netProfit = grossProfit - expenses;
+        double netMarginPct = totalRevenue > 0 ? (netProfit / totalRevenue) * 100.0 : 0.0;
 
         AnalyticsDashboardResponse response = new AnalyticsDashboardResponse();
         response.setTotalRevenue(round2(totalRevenue));
         response.setSaleCount(saleCount);
         response.setTotalQuantity(totalQuantity);
         response.setAvgOrderValue(round2(avgOrderValue));
+        response.setCogs(round2(cogs));
+        response.setExpenses(round2(expenses));
+        response.setGrossProfit(round2(grossProfit));
+        response.setGrossMarginPct(round2(grossMarginPct));
         response.setNetProfit(round2(netProfit));
         response.setNetMarginPct(round2(netMarginPct));
         response.setTopProducts(buildTopProducts(sales));
