@@ -41,7 +41,7 @@ public class AnalyticsService {
     private static final DateTimeFormatter MONTH_KEY    = DateTimeFormatter.ofPattern("yyyy-MM");
 
     public AnalyticsDashboardResponse getDashboard(LocalDate from, LocalDate to, String granularity, boolean includeSeries) {
-        List<Sale> sales = saleRepository.findBySaleDateBetween(from, to);
+        List<Sale> sales = saleRepository.findBySaleDateInRange(from, to.plusDays(1));
 
         double totalRevenue = sales.stream().mapToDouble(s -> s.getTotal() != null ? s.getTotal() : 0.0).sum();
         long saleCount = sales.size();
@@ -70,7 +70,7 @@ public class AnalyticsService {
         response.setNetProfit(round2(netProfit));
         response.setNetMarginPct(round2(netMarginPct));
         response.setTopProducts(buildTopProducts(sales));
-        response.setSeries(includeSeries ? buildSeries(sales, granularity) : new ArrayList<>());
+        response.setSeries(includeSeries ? buildSeries(sales, granularity, from, to) : new ArrayList<>());
         return response;
     }
 
@@ -94,9 +94,47 @@ public class AnalyticsService {
         return stats;
     }
 
-    private List<AnalyticsSeriesPoint> buildSeries(List<Sale> sales, String granularity) {
+    private List<AnalyticsSeriesPoint> buildSeries(List<Sale> sales, String granularity, LocalDate from, LocalDate to) {
         String g = granularity == null ? "day" : granularity.toLowerCase();
         Map<String, Object[]> buckets = new LinkedHashMap<>(); // dateKey -> [label, revenueSum, qtySum]
+
+        // Pre-fill every bucket across the whole range with zero so the chart
+        // always has a continuous line/series — without this, a range where
+        // only one day (or hour/month) has sales produces a single isolated
+        // point, which a line chart just renders as a dot with nothing to
+        // connect it to.
+        switch (g) {
+            case "hour": {
+                // Hour granularity is only meaningful for a single-day range
+                // (that's the only case the frontend uses it for), so fill
+                // all 24 hours of "from".
+                for (int hour = 0; hour < 24; hour++) {
+                    String key = from + "T" + String.format("%02d", hour);
+                    String label = String.format("%02d:00", hour);
+                    buckets.put(key, new Object[]{label, 0.0, 0});
+                }
+                break;
+            }
+            case "month": {
+                YearMonth start = YearMonth.from(from);
+                YearMonth end = YearMonth.from(to);
+                for (YearMonth ym = start; !ym.isAfter(end); ym = ym.plusMonths(1)) {
+                    String key = ym.format(MONTH_KEY);
+                    String label = ym.atDay(1).format(MONTH_LABEL);
+                    buckets.put(key, new Object[]{label, 0.0, 0});
+                }
+                break;
+            }
+            case "day":
+            default: {
+                for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
+                    String key = d.toString();
+                    String label = d.format(DAY_LABEL);
+                    buckets.put(key, new Object[]{label, 0.0, 0});
+                }
+                break;
+            }
+        }
 
         for (Sale s : sales) {
             LocalDate date = s.getSaleDate();

@@ -21,8 +21,19 @@ public interface SaleRepository extends JpaRepository<Sale, Long> {
     /** All sales on a specific date */
     List<Sale> findBySaleDate(LocalDate date);
 
-    /** All sales in a date range */
+    /** All sales in a date range (inclusive on both ends, using BETWEEN). */
     List<Sale> findBySaleDateBetween(LocalDate from, LocalDate to);
+
+    /**
+     * All sales in a date range — half-open [from, to+1day). Prefer this over
+     * findBySaleDateBetween for anything that needs to reliably include every
+     * sale ON the "to" day: if sale_date is ever compared with a hidden
+     * midnight time component, BETWEEN's upper bound can silently exclude
+     * same-day sales recorded after midnight (e.g. a 5 AM sale on the last
+     * day of the range). This form can't have that problem.
+     */
+    @Query("SELECT s FROM Sale s WHERE s.saleDate >= :from AND s.saleDate < :toExclusive")
+    List<Sale> findBySaleDateInRange(@Param("from") LocalDate from, @Param("toExclusive") LocalDate toExclusive);
 
     /** All sales for a specific product */
     List<Sale> findByProductId(Long productId);
@@ -34,12 +45,12 @@ public interface SaleRepository extends JpaRepository<Sale, Long> {
     // ── Dashboard aggregates ─────────────────────────────────────────────────
 
     /** Total units sold between from and to inclusive. */
-    @Query("SELECT COALESCE(SUM(s.quantity), 0) FROM Sale s WHERE s.saleDate BETWEEN :from AND :to")
-    Long sumQuantityBetween(@Param("from") LocalDate from, @Param("to") LocalDate to);
+    @Query("SELECT COALESCE(SUM(s.quantity), 0) FROM Sale s WHERE s.saleDate >= :from AND s.saleDate < :toExclusive")
+    Long sumQuantityBetween(@Param("from") LocalDate from, @Param("toExclusive") LocalDate toExclusive);
 
     /** Number of sale transactions between from and to inclusive. */
-    @Query("SELECT COUNT(s) FROM Sale s WHERE s.saleDate BETWEEN :from AND :to")
-    Long countSalesBetween(@Param("from") LocalDate from, @Param("to") LocalDate to);
+    @Query("SELECT COUNT(s) FROM Sale s WHERE s.saleDate >= :from AND s.saleDate < :toExclusive")
+    Long countSalesBetween(@Param("from") LocalDate from, @Param("toExclusive") LocalDate toExclusive);
 
     /** All sales with an outstanding loan balance (PARTIAL_LOAN). */
     @Query("SELECT s FROM Sale s WHERE s.remainingLoan > 0 ORDER BY s.saleDate DESC, s.saleTime DESC")
